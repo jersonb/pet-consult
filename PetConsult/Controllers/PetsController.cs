@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PetConsult.Data;
 using PetConsult.Models;
+using PetConsult.ViewObjects;
+using PetConsult.ViewObjects.Requests;
 
 namespace PetConsult.Controllers
 {
@@ -21,26 +18,38 @@ namespace PetConsult.Controllers
             _context = context;
         }
 
-        // GET: api/Pets
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Pet>>> GetPet()
+        public async Task<ActionResult<IEnumerable<PetResponse>>> GetPet()
         {
-          if (_context.Pets == null)
-          {
-              return NotFound();
-          }
-            return await _context.Pets.ToListAsync();
+            if (_context.Pets == null)
+            {
+                return NotFound();
+            }
+
+            return await _context.Pets.Select(x => new PetResponse
+            {
+                Id = x.Id,
+                Name = x.Name,
+                AdoptionDate = x.AdoptionDate,
+                Birthday = x.Birthday
+            }).ToListAsync();
         }
 
-        // GET: api/Pets/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Pet>> GetPet(int id)
+        public async Task<ActionResult<PetResponse>> GetPet(int id)
         {
-          if (_context.Pets == null)
-          {
-              return NotFound();
-          }
-            var pet = await _context.Pets.FindAsync(id);
+            if (_context.Pets == null)
+            {
+                return NotFound();
+            }
+            var pet = await _context.Pets
+                .Select(x => new PetResponse
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    AdoptionDate = x.AdoptionDate,
+                    Birthday = x.Birthday
+                }).FirstOrDefaultAsync(x => x.Id == id);
 
             if (pet == null)
             {
@@ -50,15 +59,24 @@ namespace PetConsult.Controllers
             return pet;
         }
 
-        // PUT: api/Pets/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutPet(int id, Pet pet)
+        public async Task<IActionResult> PutPet(int id, PetUpdate petUpdate)
         {
-            if (id != pet.Id)
+            if (id != petUpdate.Id)
             {
                 return BadRequest();
             }
+
+            var pet = _context.Pets.FirstOrDefault(p => p.Id == id);
+
+            if (pet == default)
+            {
+                return BadRequest();
+            }
+
+            pet.Name = petUpdate.Name;
+            pet.AdoptionDate = petUpdate.AdoptionDate;
+            pet.Birthday = petUpdate.Birthday;
 
             _context.Entry(pet).State = EntityState.Modified;
 
@@ -78,25 +96,37 @@ namespace PetConsult.Controllers
                 }
             }
 
-            return NoContent();
+            var uri = Url.Action(nameof(GetPet), "pets", new { id }, "https", Request.Host.ToUriComponent())
+                ?? throw new InvalidOperationException();
+
+            return Accepted(uri);
         }
 
-        // POST: api/Pets
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Pet>> PostPet(Pet pet)
+        public async Task<ActionResult<Pet>> PostPet(PetCreate petCreate)
         {
-          if (_context.Pets == null)
-          {
-              return Problem("Entity set 'PetConsultContext.Pet'  is null.");
-          }
+            if (_context.Pets == null)
+            {
+                return Problem("Entity set 'PetConsultContext.Pet'  is null.");
+            }
+
+            var pet = new Pet
+            {
+                Name = petCreate.Name,
+                AdoptionDate = petCreate.AdoptionDate,
+                Birthday = petCreate.Birthday,
+            };
+
             _context.Pets.Add(pet);
+
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetPet", new { id = pet.Id }, pet);
+            var uri = Url.Action(nameof(GetPet), "pets", new { pet.Id }, "https", Request.Host.ToUriComponent())
+            ?? throw new InvalidOperationException();
+
+            return Created(uri, new { pet.Name });
         }
 
-        // DELETE: api/Pets/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePet(int id)
         {
