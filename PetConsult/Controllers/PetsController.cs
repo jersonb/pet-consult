@@ -146,6 +146,26 @@ namespace PetConsult.Controllers
             return NoContent();
         }
 
+        [HttpDelete()]
+        public async Task<IActionResult> DeletePet())
+        {
+            var id =0;
+            if (_context.Pets == null)
+            {
+                return NotFound();
+            }
+            var pet = await _context.Pets.FindAsync(id);
+            if (pet == null)
+            {
+                return NotFound();
+            }
+
+            _context.Pets.Remove(pet);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
         private bool PetExists(int id)
         {
             return (_context.Pets?.Any(e => e.Id == id)).GetValueOrDefault();
