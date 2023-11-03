@@ -147,7 +147,7 @@ namespace PetConsult.Controllers
         }
 
         [HttpDelete()]
-        public async Task<IActionResult> DeletePet())
+        public async Task<IActionResult> DeletePet()
         {
             var id =0;
             if (_context.Pets == null)
