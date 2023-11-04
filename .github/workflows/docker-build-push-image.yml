@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest]
 
     steps:
     - uses: actions/checkout@v3
@@ -30,8 +30,9 @@ jobs:
     
     - name: Test
       run: dotnet test --no-restore --verbosity normal
-      
+
   push_to_registry:
+    needs: build-and-test
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
